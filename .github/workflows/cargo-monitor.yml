@@ -2,7 +2,7 @@ name: Cargo.toml Change Monitor
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - '**/Cargo.toml'
 
@@ -13,6 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: master  # Explicitly check out master branch
           fetch-depth: 0
 
       - name: Detect changed Cargo files
