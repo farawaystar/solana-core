@@ -13,43 +13,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: master  # Explicitly check out master branch
+          ref: master
           fetch-depth: 0
 
       - name: Detect changed Cargo files
         id: changed-files
         uses: tj-actions/changed-files@v42
         with:
-          files: |
-            **/Cargo.toml
-          separator: ','
-          
+          files: '**/Cargo.toml'
+
       - name: Create consolidated manifest
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
           mkdir -p consolidated
-          CONSOLIDATED_FILE="consolidated/cargo_manifests_$(date +%s).txt"
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          CONSOLIDATED_FILE="consolidated/cargo_manifests_$TIMESTAMP.txt"
           
-          echo "# Consolidated Cargo.toml Files" > $CONSOLIDATED_FILE
-          echo "## Changed at: $(date -u)" >> $CONSOLIDATED_FILE
+          echo "# Consolidated Cargo.toml Files" > "$CONSOLIDATED_FILE"
+          echo "## Generated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$CONSOLIDATED_FILE"
           
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            echo -e "\n\n=== $file ===" >> $CONSOLIDATED_FILE
-            cat "$file" >> $CONSOLIDATED_FILE
-          done
-          
-          echo "CONSOLIDATED_FILE=$CONSOLIDATED_FILE" >> $GITHUB_ENV
+          while IFS= read -r file; do
+            echo -e "\n\n=== $file ===" >> "$CONSOLIDATED_FILE"
+            cat "$file" >> "$CONSOLIDATED_FILE"
+          done <<< "${{ steps.changed-files.outputs.all_changed_files }}"
 
-      - name: Archive consolidated file
+      - name: Archive and upload
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: |
-          tar czvf consolidated-manifests.tar.gz -C consolidated .
-
-      - name: Upload artifact
-        if: steps.changed-files.outputs.any_changed == 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # Critical fix here
         with:
-          name: consolidated-cargo-manifests
+          name: cargo-manifests-${{ github.run_id }}
           path: |
-            consolidated-manifests.tar.gz
-          retention-days: 7
+            consolidated/*
+          retention-days: 3
