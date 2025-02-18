@@ -10,7 +10,7 @@
 [![codecov](https://codecov.io/gh/solana-labs/solana/branch/master/graph/badge.svg)](https://codecov.io/gh/solana-labs/solana)
 
 # Building
-### testing github action commit
+### testing github action commit..
 
 ## **1. Install rustc, cargo and rustfmt.**
 
