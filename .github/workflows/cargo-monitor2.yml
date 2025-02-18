@@ -1,0 +1,47 @@
+name: Cargo.toml Change Monitor
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '**/Cargo.toml'
+
+jobs:
+  consolidate-cargo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Detect changed Cargo files
+        id: changed-files
+        uses: tj-actions/changed-files@v42
+        with:
+          files: '**/Cargo.toml'
+
+      - name: Create consolidated manifest
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          mkdir -p consolidated
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          CONSOLIDATED_FILE="consolidated/cargo_manifests_$TIMESTAMP.txt"
+          
+          echo "# Consolidated Cargo.toml Files" > "$CONSOLIDATED_FILE"
+          echo "## Generated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$CONSOLIDATED_FILE"
+          
+          while IFS= read -r file; do
+            echo -e "\n\n=== $file ===" >> "$CONSOLIDATED_FILE"
+            cat "$file" >> "$CONSOLIDATED_FILE"
+          done <<< "${{ steps.changed-files.outputs.all_changed_files }}"
+
+      - name: Archive and upload
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/upload-artifact@v4  # Critical fix here
+        with:
+          name: cargo-manifests-${{ github.run_id }}
+          path: |
+            consolidated/*
+          retention-days: 3
